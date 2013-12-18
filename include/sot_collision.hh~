@@ -1,0 +1,90 @@
+/*
+ * Copyright 2013,
+ * Nirmal Giftsun
+ *
+ * CNRS
+ *
+ * This file is part of sot-collision.
+ * dynamic-graph-tutorial is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
+ * dynamic-graph-tutorial is distributed in the hope that it will be
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.  You should
+ * have received a copy of the GNU Lesser General Public License along
+ * with dynamic-graph-tutorial.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef DG_SOT_COLLISION_HH
+#define DG_SOT_COLLISION_HH
+
+namespace dynamicgraph {
+  namespace sot-collision {
+
+class SotCollision : public Entity
+    {
+    public:
+      /**
+	 \brief Constructor by name
+      */
+      SotCollision(const std::string& inName);
+
+      ~SotCollision();
+
+      /// Each entity should provide the name of the class it belongs to
+      virtual const std::string& getClassName (void) const {
+	return CLASS_NAME;
+      }
+
+      /// Header documentation of the python class
+      virtual std::string getDocString () const {
+	return
+	  "sot-collision\n";
+      }
+
+      /// Integrate equation of motion over time step given as input
+      void addObject();
+
+      /**
+	  \name Parameters
+	  @{
+      */
+
+    protected:
+      /*
+	\brief Class name
+      */
+      static const std::string CLASS_NAME;
+
+    private:
+      /**
+	 \brief Input force acting on the inverted pendulum
+      */
+      SignalPtr< double, int > forceSIN;
+      /**
+	 \brief State of the inverted pendulum
+      */
+      Signal< ::dynamicgraph::Vector, int> stateSOUT;
+
+      /// \brief Mass of the cart
+      double cartMass_;
+      /// \brief Mass of the pendulum
+      double pendulumMass_;
+      /// \brief Length of the pendulum
+      double pendulumLength_;
+      /// \brief Viscosity coefficient
+      double viscosity_;
+
+      /**
+	 \brief Compute the evolution of the state of the pendulum
+      */
+      ::dynamicgraph::Vector
+	  computeDynamics(const ::dynamicgraph::Vector& inState,
+			  const double& inControl, double inTimeStep);
+    };
+  }
+}
+
+#endif

@@ -1,0 +1,44 @@
+/*
+ *  Copyright 2013 CNRS
+ *
+ *  Nirmal Giftsun
+ */
+
+#include <boost/format.hpp>
+#include <boost/numeric/ublas/io.hpp>
+
+#include <dynamic-graph/factory.h>
+#include <dynamic-graph/command-setter.h>
+#include <dynamic-graph/command-getter.h>
+#include "dynamic-graph/tutorial/inverted-pendulum.hh"
+#include "command-increment.hh"
+#include "constant.hh"
+
+
+using namespace dynamicgraph;
+using namespace dynamicgraph::sotcollision;
+
+DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(SotCollision, "SotCollision");
+
+SotCollision::SotCollision(const std::string& inName) :
+  Entity(inName),
+  forceSIN(NULL, "SotCollision("+inName+")::input(double)::inputtrigger"),
+  stateSOUT("SotCollision("+inName+")::output(vector)::states"),
+{
+
+      docstring = "    \n"
+	"    Create an operational point attached to a robot joint local frame.\n"
+	"    \n"
+	"      Input: \n"
+	"        - a string: name of the operational point,\n"
+	"        - a string: name the joint, among (gaze, left-ankle, right ankle\n"
+	"          , left-wrist, right-wrist, waist, chest).\n"
+	"\n";
+      addCommand("createOpPoint",
+		 makeCommandVoid2(*this,&SotCollision::cmd_addObject,
+				  docstring));
+	void SotCollision::cmd_addObject(  )
+	{
+
+	}
+
