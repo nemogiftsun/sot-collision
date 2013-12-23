@@ -242,25 +242,23 @@ void SotCollision::UpdateFCLOutput()
 
        Matrix T = *linkinputs[i];
        
-       //std::cout << transform_joint_links[i].getTranslation();
-       //std::cout << transform_joint_links[i].getRotation();
-       
        Matrix3f rot(T(0,0),T(0,1),T(0,2),T(1,0),T(1,1),T(1,2),T(2,0),T(2,1),T(2,2));
        Vec3f trans(T(0,3),T(1,3),T(2,3));
        
-       transform_links[i]= Transform3f(rot,trans)*transform_joint_links[i];
-       //transform_links[i]= Transform3f(rot,trans)*transform_joint_links[i].inverse();
-
+       transform_links[i]= Transform3f(rot,trans);
+       transform_links[i] = transform_links[i] * transform_joint_links[i];
+       
        Vec3f tpart = transform_links[i].getTranslation();
        Quaternion3f quat = transform_links[i].getQuatRotation();
 
        fclstate(i,0) = tpart[0];
        fclstate(i,1) = tpart[1]; 
        fclstate(i,2) = tpart[2];
-       fclstate(i,3) = quat[0];
-       fclstate(i,4) = quat[1];
-       fclstate(i,5) = quat[2];
-       fclstate(i,6) = quat[3]; 
+      
+       fclstate(i,3) = quat.getX();  
+       fclstate(i,4) = quat.getY();
+       fclstate(i,5) = quat.getZ();
+       fclstate(i,6) = quat.getW(); 
 
        fclstate(i,7) = capsule_links[i].radius; 
        fclstate(i,8) = capsule_links[i].lz;     
@@ -272,7 +270,8 @@ void SotCollision::UpdateFCLOutput()
 
 void SotCollision::createlinkmodel(const Matrix& linkdescription)
 {
-    Quaternion3f quatrotation;
+   
+    Matrix3f rotation;
     int i;
  
     
@@ -289,8 +288,9 @@ void SotCollision::createlinkmodel(const Matrix& linkdescription)
 
         //create transforms
         Vec3f translation(linkdescription(i,3),linkdescription(i,4),linkdescription(i,5));
-        quatrotation.fromEuler(linkdescription(i,8),linkdescription(i,7),linkdescription(i,6));
-        Transform3f joint_link_transform(quatrotation,translation);
+        rotation.setEulerZYX(linkdescription(i,6),linkdescription(i,7),linkdescription(i,8));
+        //quatrotation.fromEuler(linkdescription(i,8),linkdescription(i,7),linkdescription(i,6));
+        Transform3f joint_link_transform(rotation,translation);
         transform_joint_links.push_back(joint_link_transform);             
         transform_links.push_back(joint_link_transform);
 

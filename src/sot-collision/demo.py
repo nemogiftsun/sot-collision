@@ -70,9 +70,9 @@ class RobotCollisionModel:
         task_waist.add (feature_waist.name)
 
        # Create task for the lift
-        I4 =   ((1.,0,0,0.321),
-            (0,1.,0,0.109),
-            (0,0,1.,0.848),
+        I4 =   ((1.,0,0,0.0),
+            (0,1.,0,0.136),
+            (0,0,1.,0.089),
             (0,0,0,1.),)
         feature_lift = FeaturePosition ('position_lift', self.robot.dynamic.shoulder_lift_joint, self.robot.dynamic.Jshoulder_lift_joint, I4)
         #feature_lift.selec.value = '000000'
@@ -137,7 +137,8 @@ class RobotCollisionModel:
         plug (self.solver.control, self.robot.device.control)
         # sot collision
         self.a = sc.SotCollision("sc")
-        self.a.createlinkmodel(((0,0.08,0.01,0,0,0.1,0,0,0),(1,0.08,0.04,0,0,0,0,0,0),(2,0.09,0.17,0,0.25,0.2,0,1.57,0),(3,0.07,0.5,0.2,0,0,0,0,0),(4,0.07,0.5,0.2,0,0,0,0,0),(5,0.07,0.5,0.2,0,0,0,0,0),(6,0.07,0.5,0.2,0,0,0,0,0)))
+#(((0,0.08,0.01,0,0,0.0,0.0,0,0),(1,0.08,0.04,0,0,0,0,0,0),(2,0.09,0.17,0.2,0.0,0.0,0,1.57,0),(3,0.07,0.14,0.2,0.0,0.0,-3.1416,1.5706,-3.1416),(4,0.05,0.03,0.0,0.093,0,-3.14,0,-3.14),(5,0.057,0.02,0.0,0,-0.095,-3.14,0,-3.14),(6,0.04,0.01,0.0,0.065,0,1.57,0,0)))
+        self.a.createlinkmodel(((0,0.08,0.01,0,0,0.0,0.0,0,0),(1,0.08,0.04,0,0,0,0,0,0),(2,0.09,0.15,0.2,0.0,0.0,0,1.57,0),(3,0.07,0.14,0.2,0.0,0.0,-3.1416,1.5706,-3.1416),(4,0.05,0.03,0.0,0.093,0,-3.14,0,-3.14),(5,0.057,0.02,0.0,0,-0.095,-3.14,0,-3.14),(6,0.04,0.01,0.0,0.065,0,1.57,0,0)))
         plug (self.robot.dynamic.base_joint,self.a.link_0)
         plug (self.robot.dynamic.shoulder_pan_joint,self.a.link_1)
         plug ( self.robot.dynamic.shoulder_lift_joint,self.a.link_2)
@@ -150,6 +151,7 @@ class RobotCollisionModel:
         self.a.updatefclmodel(1)
         self.getstate()
         self.rcm_pub.publish(self.linkcollisionmodel)
+        print self.robot.dynamic.shoulder_lift_joint.value
         #self.r.sleep()
         #self.linkcollisionmodel = MarkerArray()
 
@@ -169,20 +171,21 @@ class RobotCollisionModel:
             #self.link.ns = "basicshapes"
             self.link.id = i
             self.link.action = self.link.ADD
-            self.link.pose.position.x = state[3][0];
-            self.link.pose.position.y = state[3][1];
-            self.link.pose.position.z = state[3][2];
-            self.link.pose.orientation.x = state[3][3]
-            self.link.pose.orientation.y = state[3][4]
-            self.link.pose.orientation.z = state[3][5]
-            self.link.pose.orientation.w = state[3][6]
-            self.link.scale.x = state[3][7];
-            self.link.scale.y = state[3][7];
-            self.link.scale.z = state[3][8];
+            self.link.pose.position.x = state[i][0];
+            self.link.pose.position.y = state[i][1];
+            self.link.pose.position.z = state[i][2];
+            self.link.pose.orientation.x = state[i][3]
+            self.link.pose.orientation.y = state[i][4]
+            self.link.pose.orientation.z = state[i][5]
+            self.link.pose.orientation.w = state[i][6]
+            self.link.scale.x = state[i][7];
+            self.link.scale.y = state[i][7];
+            self.link.scale.z = state[i][8];
             self.link.color.r = 0.0;
             self.link.color.g = 1.0;
             self.link.color.b = 0.0;
             self.link.color.a = 1.0;
+            #pself.link.pose.orientation
             #self.link.lifetime =  rospy.Duration();
             self.linkcollisionmodel.markers.append(self.link)
 
