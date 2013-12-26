@@ -137,9 +137,9 @@ void SotCollision::capsulecollision()
                 
         v1 = 5; 
         v2 = 10 ;
-        x= 0; 
+        x= 23; 
         y = 0;
-        z = 23; 
+        z = 0; 
 
 	Capsule capsulea (v1, v2);
 	Transform3f capsulea_transform (Vec3f (x, y, z));
@@ -151,14 +151,17 @@ void SotCollision::capsulecollision()
         z = 0; 
 
 	Capsule capsuleb (v1, v2);
-	Transform3f capsuleb_transform (Vec3f (x, y, z));
+    Matrix3f rot(0.0,0,1,0,1,0,-1,0,0) ;
+	Transform3f capsuleb_transform (rot,Vec3f (x, y, z));
 	
 	    FCL_REAL penetration = 0.;
 	    FCL_REAL dist = 0.;
-	    check = solver.shapeDistance<Capsule, Capsule>(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &dist, NULL, NULL);
+        Vec3f l1 , l2;
+	    check = solver.shapeDistance<Capsule, Capsule>(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &dist, &l1, &l2);
 	    //check = solver.shapeIntersect(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &contact_point, &penetration, &normal);
 	    distance = dist;
-
+        std::cout << l1;
+        std::cout << l2; 
         //Transform3f temptransform (Vec3f (1, 1, 1));
         //Vec3f a = temptransform.transform(Vec3f (1, 2, 3));
         //std::cout << "vectranform" << std::endl;

@@ -193,10 +193,14 @@ class RobotCollisionModel:
 # tf.transformations.quaternion_from_euler(0, 0, 30*math.pi/180),
 #rcm = RobotCollisionModel()
 if __name__ == '__main__' :
-    rospy.init_node('collision_checker')
-    rcm = RobotCollisionModel()
-    while not rospy.is_shutdown():
-        rcm.publish()
+    #rospy.init_node('collision_checker')
+    a = sc.SotCollision("sc")
+    a.DoCapsuleCollisionCheck(1)
+    print a.getdistance()
+
+#    while not rospy.is_shutdown():
+#        rcm.publish()
+    
 
 '''
 
