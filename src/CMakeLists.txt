@@ -65,8 +65,6 @@ PKG_CONFIG_USE_DEPENDENCY(wrap fcl)
 message(dyngrap ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 
-install(PROGRAMS ${CMAKE_SOURCE_DIR}/script/helloscript
-                 ${CMAKE_SOURCE_DIR}/src/sot-collision/demo.py
-                 ${CMAKE_SOURCE_DIR}/src/sot-collision/ur.py
+install(PROGRAMS ${CMAKE_SOURCE_DIR}/src/sot-collision/demo.py
          DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
