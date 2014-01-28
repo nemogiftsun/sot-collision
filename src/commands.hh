@@ -102,7 +102,7 @@ class CreateLinkModel : public Command
           //double a = (values[0].value())(0,1);
           //Matrix a = values[0].value();
           //std::cout<< a;
-	      ip.createlinkmodel(values[0].value()); 
+	      ip.createfclmodel(values[0].value()); 
 		  return Value();
 		};
       }; //class addobject
@@ -125,11 +125,11 @@ class UpdateFCLModel : public Command
 		{
 		  Entity& entity = owner();
 		  SotCollision& ip = static_cast<SotCollision&>(entity);
-	      ip.UpdateFCLOutput();
+      int dummy;
+	    ip.updatefclmodels(dummy,1);
 		  return Value();
 		};
       }; //class addobject
-
 
 
 

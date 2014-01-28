@@ -54,19 +54,24 @@ namespace ml = maal::boost;
 
 
 
-
+using namespace std;
 using namespace fcl;
 using namespace collisiontest;
 using namespace ml;
 using namespace dynamicgraph::sot;
 using namespace dynamicgraph;
 
+//point in local coordinate frame
+typedef boost::tuples::tuple<FCL_REAL,FCL_REAL,FCL_REAL> XYZ;
 
-typedef boost::tuples::tuple<FCL_REAL,FCL_REAL,FCL_REAL,FCL_REAL,FCL_REAL,FCL_REAL> XYZRPY;
+// tuple of inter-model distance and the closest point to the other model
+typedef boost::tuples::tuple<FCL_REAL,XYZ> One2OneModelDistance;
 
-typedef boost::tuples::tuple<FCL_REAL,FCL_REAL> RH;
+// vector of model information
+typedef std::vector<One2OneModelDistance> One2ManyModelDistance;
 
-typedef boost::tuples::tuple<std::string,RH,XYZRPY> Link_Description;
+// vector of model information
+typedef std::vector<One2ManyModelDistance> InterModelDistanceMatrix;
 
 
 namespace dynamicgraph {
@@ -115,17 +120,35 @@ class SotCollision : public Entity
 
       void capsulebvhcollision();
 
-      void UpdateFCLOutput();
+      int& updatefclmodels(int& dummy,int time);
 
-      void createlinkmodel(const Matrix& linkdescription);
+      void createfclmodel(const Matrix& bodydescription);
 
-      dynamicgraph::SignalPtr< MatrixHomogeneous,int >& createPositionSignal(const std::string& signame);
+      void createcollisionpair(const std::string& body0, const std::string& body1);
 
+      void createcollisionlink(const std::string& bodyname, const Vector& bodydescription);
 
+      void computefclmodelclosestdistancejacobian();
+
+      dynamicgraph::SignalPtr< MatrixHomogeneous,int >& createPositionSignalIN(const std::string& signame);
+
+      dynamicgraph::SignalPtr< Matrix,int >& createJacobiansignalIN(const std::string& signame);
+
+      
+
+      dynamicgraph::SignalTimeDependent< Matrix,int >& createIMDJacobianSignal();
+
+      dynamicgraph::SignalTimeDependent< Vector,int >& createInterModelDistanceSignal();
 
       Matrix& computeFCLOutput(Matrix& res, int t);
 
+      std::map<std::string,int> fcl_body_map; 
 
+      Vector& computeimdVector(Vector& res, int time );
+
+      Matrix& computeimdJacobian(Matrix& res,int time );
+
+      MatrixHomogeneous UNIT_ROTATION;
 
     protected:
       /*
@@ -135,9 +158,21 @@ class SotCollision : public Entity
 
     private:
 
-      int size;
+      int dimension;
+      //intern signals
+      dynamicgraph::SignalTimeDependent<int,int> fclmodelupdateSINTERN;
+       
       dynamicgraph::SignalTimeDependent< Matrix,int> StatesOUT;
-      dynamicgraph::SignalPtr< MatrixHomogeneous,int > *linkinputs[10];
+      dynamicgraph::SignalPtr< MatrixHomogeneous,int > *body_transformation_input[10];
+      dynamicgraph::SignalPtr< Matrix,int > *body_jacobian_input[10];
+      dynamicgraph::SignalPtr< Matrix,int > *collision_body_jacobian_input[10];
+      dynamicgraph::SignalTimeDependent<Vector,int> *collisiondistance;
+      dynamicgraph::SignalTimeDependent<Matrix,int> *collisionjacobian;
+
+
+      
+      dynamicgraph::SignalTimeDependent<ml::Vector,int> InterModelDistanceOUT;
+
       std::vector<Capsule> capsule_links;
       std::vector<Transform3f> transform_links;
       std::vector<Transform3f> transform_joint_links;
@@ -148,6 +183,11 @@ class SotCollision : public Entity
       double TimeCheck;
       Matrix fclstate;
       Matrix LinkDescription;
+      // collision pairs
+      std::vector< std::vector<std::string> >  collision_pairs;
+      int num_collisionpairs;
+
+    InterModelDistanceMatrix imdm;
 
     };
   }
