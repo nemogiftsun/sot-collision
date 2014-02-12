@@ -76,13 +76,13 @@ class RobotCollisionModel:
         #self.a.createlinkmodel(((0,0.08,0.01,0,0,0.0,0.0,0,0),(1,0.08,0.04,0,0,0,0,0,0),(2,0.09,0.15,0.2,0.0,0.0,0,1.57,0),(3,0.07,0.14,0.2,0.0,0.0,-3.1416,1.5706,-3.1416),(4,0.05,0.03,0.0,0.093,0,-3.14,0,-3.14),(5,0.057,0.02,0.0,0,-0.095,-3.14,0,-3.14),(6,0.04,0.01,0.0,0.065,0,1.57,0,0)))
 
         # create links for collision check
-        self.a.createcollisionlink("base_link",(0.08,0.01,0,0,0.0,0.0,0,0))
-        self.a.createcollisionlink("shoulder_pan_link",(0.08,0.04,0,0,0,0,0,0))
-        self.a.createcollisionlink("shoulder_lift_link",(0.09,0.15,0.2,0.0,0.0,0,1.57,0))
-        self.a.createcollisionlink("elbow_link",(0.07,0.14,0.2,0.0,0.0,-3.1416,1.5706,-3.1416))
-        self.a.createcollisionlink("wrist_1_link",(0.05,0.03,0.0,0.093,0,-3.14,0,-3.14))
-        self.a.createcollisionlink("wrist_2_link",(0.057,0.02,0.0,0,-0.095,-3.14,0,-3.14))
-        self.a.createcollisionlink("wrist_3_link",(0.04,0.01,0.0,0.065,0,1.57,0,0))
+        self.a.createcollisionlink("base_link","capsule","internal",(0.08,0.01,0,0,0,0.0,0.0,0,0))
+        self.a.createcollisionlink("shoulder_pan_link","capsule","internal",(0.08,0.04,0,0,0,0,0,0,0))
+        self.a.createcollisionlink("shoulder_lift_link","capsule","internal",(0.09,0.15,0,0.2,0.0,0.0,0,1.57,0))
+        self.a.createcollisionlink("elbow_link","capsule","internal",(0.07,0.14,0,0.2,0.0,0.0,-3.1416,1.5706,-3.1416))
+        self.a.createcollisionlink("wrist_1_link","capsule","internal",(0.05,0.03,0,0.0,0.093,0,-3.14,0,-3.14))
+        self.a.createcollisionlink("wrist_2_link","capsule","internal",(0.057,0.02,0,0.0,0,-0.095,-3.14,0,-3.14))
+        self.a.createcollisionlink("wrist_3_link","capsule","internal",(0.04,0.01,0,0.0,0.065,0,1.57,0,0))
 
         # plug joint position and joint jacobian to collision checker entity
         plug (self.robot.dynamic.base_joint,self.a.base_link)
@@ -205,7 +205,7 @@ class RobotCollisionModel:
         self.solver = SolverKine('sot')
         self.solver.setSize (robot_dimension)  
         self.solver.push (self.task_waist_metakine.task.name)
-        #self.solver.push (self.task_collision_avoidance.name)
+        self.solver.push (self.task_collision_avoidance.name)
         self.solver.push (self.task_wrist_metakine.task.name)
         self.solver.damping.value =3e-2
         plug (self.solver.control, self.robot.device.control)
@@ -302,7 +302,6 @@ class RobotCollisionModel:
             #self.link.lifetime =  rospy.Duration();
             self.linkcollisionmodel.markers.append(self.link)
 
-
 # tf.transformations.quaternion_from_euler(0, 0, 30*math.pi/180),
 #rcm = RobotCollisionModel()
 if __name__ == '__main__' :
@@ -313,7 +312,6 @@ if __name__ == '__main__' :
     while i < 1000: 
     	rcm.publish()
        
-
 '''
 
     rcm = RobotCollisionModel()

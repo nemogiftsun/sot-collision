@@ -36,9 +36,21 @@ DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(SotCollision, "SotCollision");
 
 SotCollision::SotCollision(const std::string& inName) :
   Entity(inName),
-  StatesOUT(boost::bind(&SotCollision::computeFCLOutput,this,_1,_2),sotNOSIGNAL,"SotCollision("+inName+")::output(matrix)::StatesOUT"),
-  fclmodelupdateSINTERN(boost::bind(&SotCollision::updatefclmodels,this,_1,_2),sotNOSIGNAL,"sotCollision("+name+")::intern(dummy)::fclmodelupdateSINTERN" )
+fclmodelupdateSINTERN(boost::bind(&SotCollision::updatefclmodels,this,_1,_2),sotNOSIGNAL,"sotCollision("+name+")::intern(dummy)::fclmodelupdateSINTERN" ),
+collisionDistance( boost::bind(&SotCollision::computeimdVector,this,_1,_2),
+fclmodelupdateSINTERN,
+"sotCollision("+name+")::output(vector)::"+std::string("collisionDistance")),
+collisionJacobian(boost::bind(&SotCollision::computeimdJacobian,this,_1,_2),
+fclmodelupdateSINTERN,
+"sotCollision("+name+")::output(matrix)::"+std::string("collisionJacobian"))
 {
+
+			signalRegistration(collisionJacobian);
+			signalRegistration(collisionDistance);
+
+     collisionDistance.addDependency(fclmodelupdateSINTERN);
+     collisionJacobian.addDependency(fclmodelupdateSINTERN);
+
       dimension = 0;
       num_collisionpairs = 0;
  
@@ -47,34 +59,17 @@ SotCollision::SotCollision(const std::string& inName) :
      UNIT_ROTATION(2,0) = 0; UNIT_ROTATION(2,1) = 0; UNIT_ROTATION(2,2)=1;
      UNIT_ROTATION(0,3) = 0;  UNIT_ROTATION(1,3) =0 ; UNIT_ROTATION(2,3)=0;
  
-      //capsule_links = new Capsule[no_links];  
+    // genericSignalRefs.push_back( sig );
 
-      // create output signals
-      collisiondistance = &createInterModelDistanceSignal();
 
-      collisionjacobian = &createIMDJacobianSignal();
-
-      signalRegistration(StatesOUT);
-
- 
-      //Vector a;
-      
-      // std::cout <<a;
-      
-
-      //genericSignalRefs.push_back(fclLinkStatesOUT);
-      
-      
-
+     //fclmodelupdateSINTERN.setDependencyType(TimeDependency<int>::BOOL_DEPENDENT);
 
       using namespace ::dynamicgraph::command;
       std::string docstring;
       docstring = docCommandVoid2("Create a jacobian (world frame) signal only for one joint.",
 				  "string (signal name)","string (joint name)");
-      addCommand(std::string("DoCapsuleCollisionCheck"),
-		 new commands::DoCapsuleCollisionCheck(*this, docstring));
-      addCommand(std::string("DoCapsuleBVHCollisionCheck"),
-		 new commands::DoCapsuleBVHCollisionCheck(*this, docstring));
+      addCommand(std::string("DoExperimentCollisionCheck"),
+		 new commands::DoExperimentCollisionCheck(*this, docstring));
   // getPendulumMass
   docstring =
     "\n"
@@ -98,29 +93,19 @@ SotCollision::SotCollision(const std::string& inName) :
 	     new ::dynamicgraph::command::Getter<SotCollision, double>
 	     (*this, &SotCollision::gettime, docstring));	 	
   
-    "\n"
-    "    create model\n"
-    "\n";
-    addCommand(std::string("createlinkmodel"),
-		     new commands::CreateLinkModel(*this, docstring));
 
-    addCommand(std::string("getfclstate"),
+
+  addCommand(std::string("getfclstate"),
 	     new ::dynamicgraph::command::Getter<SotCollision, Matrix>
 	     (*this, &SotCollision::getfclstate, docstring));	 	
   
   
- 
-    "\n"
-    "    update fcl\n"
-    "\n";
-    addCommand(std::string("updatefclmodel"),
-		     new commands::UpdateFCLModel(*this, docstring));
 
 
 ////// new important and useful commands
 
     addCommand(std::string("createcollisionlink"),
-		     makeCommandVoid2(*this,&SotCollision::createcollisionlink,docstring));
+		     makeCommandVoid4(*this,&SotCollision::createcollisionlink,docstring));
 
     addCommand(std::string("createcollisionpair"),
 		     makeCommandVoid2(*this,&SotCollision::createcollisionpair,docstring));
@@ -152,19 +137,19 @@ docstring =
 SotCollision::~SotCollision()
 {
 }
-void SotCollision::capsulecollision()
+void SotCollision::experimentcollision()
 {
 
 
         Timer timer;
     
         float v1,v2,x,y,z;
-	    GJKSolver_libccd solver;
+	    GJKSolver_indep solver;
         int i = 0;
         //gettimeofday(&start, NULL);
         timer.start();
         
-        while(i<1){
+       /* while(i<1){
                 
         v1 = 5; 
         v2 = 10 ;
@@ -188,7 +173,24 @@ void SotCollision::capsulecollision()
 	    FCL_REAL penetration = 0.;
 	    FCL_REAL dist = 0.;
         Vec3f l1 , l2;
-	    check = solver.shapeDistance<Capsule, Capsule>(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &dist, &l1, &l2);
+      
+	    check = solver.shapeDistance<Capsule, Capsule>(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &dist, &l1, &l2);*/
+
+       Vec3f l1 , l2;
+       FCL_REAL dist;    
+       Box boxa(0.64,0.4,0.11);
+       Transform3f boxa_transform (Vec3f(0,0,0));
+       Box boxb(0.5,0.8,0.11);
+       Transform3f boxb_transform (Vec3f(0.77,-0.82,0.025));
+       check = solver.shapeDistance(boxb, boxb_transform, boxa, boxa_transform, &dist, &l1, &l2);
+
+       l1 = boxa_transform.transform(l1);
+
+       l2 = boxb_transform.transform(l2);
+
+       std::cout << l1;
+       std::cout << l2; 
+
 	    //check = solver.shapeIntersect(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &contact_point, &penetration, &normal);
 	    distance = dist;
         //std::cout << l1;
@@ -204,60 +206,26 @@ void SotCollision::capsulecollision()
         //{
           //gettimeofday(&start, NULL);
         //}
-        i = i + 1;
-        }
+        //i = i + 1;
+        //}
      
         //gettimeofday(&end, NULL);
-        timer.stop();
+        //timer.stop();
         //diff = end.tv_usec - start.tv_usec - 15 ;
-        diff = timer.getElapsedTimeInMicroSec() - 15;
+       // diff = timer.getElapsedTimeInMicroSec() - 15;
    
         
 }	  
-void SotCollision::capsulebvhcollision()
-{
-    std::vector<TStruct> ts;
 
-    ts = broad_phase_collision_test_customized(2000, 10000, 100, 1, false, true);
-
-    TimeCheck = ts[1].overall_time;
-}
-
-
-
-
-
-Matrix& SotCollision::computeFCLOutput(Matrix& res, int t)
-{
-    int i;
-
-    for(i=0;i<dimension;++i)
-    {
-       Vec3f translation = transform_links[i].getTranslation();
-       Quaternion3f quat = transform_links[i].getQuatRotation();
-        
-       res(i,0) = translation[0];
-       res(i,1) = translation[1]; 
-       res(i,2) = translation[2];
-       res(i,3) = quat[0];
-       res(i,4) = quat[1];
-       res(i,5) = quat[2];
-       res(i,6) = quat[3];       
-    }
-    
-    return res;
-    
-}
 
 
 int& SotCollision::updatefclmodels(int& dummy,int time)
 {
 
-    
 // update the fcl models from current transformation matrix
     for(int i=0;i<dimension;++i)
     {       
-       fclstate.resize(dimension,9);
+       fclstate.resize(dimension,10);
 
        Matrix T = body_transformation_input[i]->access(time);
 
@@ -280,18 +248,28 @@ int& SotCollision::updatefclmodels(int& dummy,int time)
        fclstate(i,5) = quat.getZ();
        fclstate(i,6) = quat.getW(); 
 
-       fclstate(i,7) = capsule_links[i].radius; 
-       fclstate(i,8) = capsule_links[i].lz;     
-  
-    }
+       if(link_info_map[i].link_type == "capsule")
+       {
 
-    
+               fclstate(i,7) = capsule_links[link_info_map[i].index].radius; 
+               fclstate(i,8) = capsule_links[link_info_map[i].index].lz;  
+               fclstate(i,9) = 0;  
+       }
+       else if(link_info_map[i].link_type == "box")
+       {
+               fclstate(i,7) = box_links[link_info_map[i].index].side[0]; 
+               fclstate(i,8) = box_links[link_info_map[i].index].side[1];   
+               fclstate(i,9) = box_links[link_info_map[i].index].side[2];     
+       }
+   
+    }
 
 // calculate inter model distance 
 // ONLY INTER CAPSULE DISTANCE COMPUTED. A GENERALIZATION WILL BE INTRODUCED LATER 
 
     // define solver
     GJKSolver_libccd solver;
+    GJKSolver_indep solver1;
     
     // variables for fcl models
     FCL_REAL dist;
@@ -300,38 +278,64 @@ int& SotCollision::updatefclmodels(int& dummy,int time)
     // compute the imdm
     //  This matrix is a vector of dimension * dimension 
     // (distance,closestpointinthecorrespondingrowlink)
+
+    
     
     for(int i=0;i<dimension;++i)
     {
 
-				Capsule capsulea (capsule_links[i].radius, capsule_links[i].lz);
+				//Capsule linka (capsule_links[i].radius, capsule_links[i].lz);
 
-				Transform3f capsulea_transform  = transform_links[i];
+				Transform3f linka_transform  = transform_links[i];
 
 				imdm.at(i).at(i) = make_tuple(0,(0,0,0));
        
 				for(int j=i+1;j<dimension;++j)
 				{                
 
-		  	    Capsule capsuleb (capsule_links[j].radius, capsule_links[j].lz);
+				    if(link_info_map[i].link_type == "capsule")
+				    {
 
-		        Transform3f capsuleb_transform  = transform_links[j];
+								if(link_info_map[j].link_type == "capsule")
+								{
+                	  check = solver.shapeDistance<Capsule, Capsule>(capsule_links[link_info_map[i].index],transform_links[i], capsule_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
 
-					  check = solver.shapeDistance<Capsule, Capsule>(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &dist, &l1, &l2);
+								}
+                else if(link_info_map[j].link_type == "box")
+								{
+                	  check = solver.shapeDistance(capsule_links[link_info_map[i].index],transform_links[i], box_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
+								}
+
+				    }
+				    else if(link_info_map[i].link_type == "box")
+				    {
+
+								if(link_info_map[j].link_type == "capsule")
+								{
+                	  check = solver.shapeDistance(box_links[link_info_map[i].index],transform_links[i], capsule_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
+
+								}
+                else if(link_info_map[j].link_type == "box")
+								{
+                	  check = solver1.shapeDistance(box_links[link_info_map[i].index],transform_links[i], box_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
+
+
+                           l1 = transform_links[i].transform(l1);
+                           
+                           l2 = transform_links[j].transform(l2);
+ 
+                                              
+								}
+
+				    }
 
 
 		        imdm.at(i).at(j) = make_tuple(dist,make_tuple(l1[0],l1[1],l1[2]));
 
 		        imdm.at(j).at(i) = make_tuple(dist,make_tuple(l2[0],l2[1],l2[2])); 
-
-            //std::cout <<"object"<<i<<"and"<<j<<"is"<<imdm[i][j].get<1>().get<0>()<<std::endl;  
-            //std::cout <<"object"<<i<<"and"<<j<<"is"<<l1[0]<<std::endl; 
-            //std::cout <<"object"<<i<<"and"<<j<<"is"<<imdm[i][j].get<1>().get<1>()<<std::endl; 
-            //std::cout <<"object"<<i<<"and"<<j<<"is"<<imdm[i][j].get<1>().get<2>()<<std::endl; 
      
 		    }
         
-
      }
    
 //compute inter model jacobian
@@ -342,7 +346,6 @@ int& SotCollision::updatefclmodels(int& dummy,int time)
 
 Matrix& SotCollision::computeimdJacobian(Matrix& res, int time)
 {
-
 
 for (int p=0; p < num_collisionpairs;p++)
 {
@@ -435,12 +438,23 @@ for (int p=0; p < num_collisionpairs;p++)
 
      Ji.extract(0,0,3,cols,Jiv);
      Ji.extract(2,0,3,cols,Jiw);
-     Jj.extract(0,0,3,cols,Jjv);
-     Jj.extract(2,0,3,cols,Jjw);
+     if(link_info_map[j].link_location == "internal")
+     {
+        Jj.extract(0,0,3,cols,Jjv);
+        Jj.extract(2,0,3,cols,Jjw);
+     }
 
      // point gradient computation
      Matrix abpointgradient;
+
+     if(link_info_map[j].link_location == "internal")
+     {
      abpointgradient  = (Jiv-(ssmaclosestpoint*Jiw)) - (Jjv-(ssmbclosestpoint*Jjw));
+     }
+     else
+     {
+      abpointgradient  = (Jiv-(ssmaclosestpoint*Jiw));    
+     }
      //compute collision jacobian
      Matrix cj;
      //ln 3*1
@@ -475,33 +489,6 @@ for (int p=0; p < num_collisionpairs;p++)
   return res;
 }
 
-dynamicgraph::SignalTimeDependent<Matrix,int>& SotCollision::createIMDJacobianSignal( )
-{
-  dynamicgraph::SignalTimeDependent<Matrix,int > * sig
-    = new dynamicgraph::SignalTimeDependent<Matrix,int>
-    ( boost::bind(&SotCollision::computeimdJacobian,this,_1,_2),
-      fclmodelupdateSINTERN,
-      "sotCollision("+name+")::output(matrix)::"+std::string("collisionJacobian"));
-
-  genericSignalRefs.push_back( sig );
-  signalRegistration( *sig );
-  return *sig;
-}
-dynamicgraph::SignalTimeDependent<Vector,int>& SotCollision::createInterModelDistanceSignal( )
-{
-
-  dynamicgraph::SignalTimeDependent< Vector,int > * sig
-    = new dynamicgraph::SignalTimeDependent<Vector,int>
-    ( boost::bind(&SotCollision::computeimdVector,this,_1,_2),
-      fclmodelupdateSINTERN,
-      "sotCollision("+name+")::output(vector)::"+std::string("collisionDistance"));
-
-  genericSignalRefs.push_back( sig );
-  signalRegistration( *sig );
-
-  return *sig;  
-}
-
 
 dynamicgraph::SignalPtr< MatrixHomogeneous,int >& SotCollision::createPositionSignalIN( const std::string& signame)
 {
@@ -513,6 +500,8 @@ dynamicgraph::SignalPtr< MatrixHomogeneous,int >& SotCollision::createPositionSi
 
   genericSignalRefs.push_back( sig );
   signalRegistration( *sig );
+
+ 
 
   return *sig;  
 }
@@ -528,75 +517,11 @@ dynamicgraph::SignalPtr< Matrix,int >& SotCollision::createJacobiansignalIN( con
   genericSignalRefs.push_back( sig );
   signalRegistration( *sig );
 
+
   return *sig;  
 }
 
-void SotCollision::createfclmodel(const Matrix& bodydescription)
-{
- 
-    // set the dimension for fcl checks
-    dimension  = 7;
-    // resize the model parameters and the transformations 
-    capsule_links.reserve(dimension);
-    transform_links.resize(dimension);
-    // joint-link transformation matrix to be in sync with rviz as orientation representation of ros is different with sot-dynamics
-    transform_joint_links.resize(dimension);
-    // resize intermodel distance matrix
-		imdm.resize(dimension);
-		for(int i=0;i<dimension;++i)
-		{
-		    imdm[i].resize(dimension);
-		}  
 
-    // create input signals
-    //    - pose signal from sot dynamic
-    // create output signals    
-    //    - inter fcl model distance signal for each body 
-    //    - jacobian signal for each body
-
-    Matrix3f rotation;
-
-    for(int i=0;i<dimension;++i)
-    {
-      // create input position/jacbian signals which is supposedly to be plugged to sot dynamic position/jacobian signals
-        std::string signame_in = "body_" + boost::lexical_cast<std::string>(bodydescription(i,0));
-        fcl_body_map.insert(std::pair<std::string,int>(signame_in,i) ); 
-        body_transformation_input[i] = &createPositionSignalIN(signame_in); 
-        body_jacobian_input[i] = &createJacobiansignalIN(std::string("J")+signame_in); 
-      // temporarily consider only capsules
-        // create capsules for the body
-        Capsule capsule (bodydescription(i,1),bodydescription(i,2));
-        capsule_links.push_back(capsule);
-
-        //create transforms
-        Vec3f translation(bodydescription(i,3),bodydescription(i,4),bodydescription(i,5));
-        rotation.setEulerZYX(bodydescription(i,6),bodydescription(i,7),bodydescription(i,8));
-        Transform3f joint_link_transform(rotation,translation);
-
-
-        // push joint link transforms extracted from body description
-        transform_joint_links[i] = joint_link_transform;             
-        // initialize the fcl body transforms
-        //transform_links.push_back(joint_link_transform);
-
-      
-      fclmodelupdateSINTERN.addDependency( *body_transformation_input[i] );
-
-
-      fclmodelupdateSINTERN.addDependency(*body_jacobian_input[i]);
-
-
-     // create output signals
-     //std::string signame_in = "body_6";
-     //std::string signame_in1 = "body_1";
-
-     //createInterModelDistanceSignal(signame_in,signame_in1);
-     //createIMDJacobianSignal(signame_in,signame_in1);
-                
-    }
-
- 
-}
 
 void SotCollision::createcollisionpair(const std::string& body0,const std::string& body1)
 {
@@ -614,16 +539,17 @@ void SotCollision::createcollisionpair(const std::string& body0,const std::strin
   int i = fcl_body_map[body0];
   int j = fcl_body_map[body1];
 
-    collisiondistance->addDependency( *body_transformation_input[i] );
-    collisiondistance->addDependency( *body_transformation_input[j] );
+    collisionDistance.addDependency( *body_transformation_input[i] );
+    collisionDistance.addDependency( *body_transformation_input[j] );
 
-    collisionjacobian->addDependency( *body_jacobian_input[i] );
-    collisionjacobian->addDependency( *body_jacobian_input[j] );
+
+    collisionJacobian.addDependency( *body_jacobian_input[i] );
+    collisionJacobian.addDependency( *body_jacobian_input[j] );
 
 }
 
 
-void SotCollision::createcollisionlink(const std::string& bodyname, const std::string& bodytype,const Vector& bodydescription)
+void SotCollision::createcollisionlink(const std::string& bodyname, const std::string& bodytype,const std::string& bodynaturelocation,const Vector& bodydescription)
 {
 
 // set the dimension for fcl checks
@@ -657,13 +583,34 @@ void SotCollision::createcollisionlink(const std::string& bodyname, const std::s
         collision_body_jacobian_input[i] = &createJacobiansignalIN(std::string("CJ")+signame_in);
       // temporarily consider only capsules
         // create capsules for the body
+
+        //ShapeBase collision_link;
         if(bodytype == "capsule")
-        Capsule capsule (bodydescription(0),bodydescription(1));
-        capsule_links.push_back(capsule);
+        {
+		      Capsule capsule (bodydescription(0),bodydescription(1));
+		      capsule_links.push_back(capsule);
+          link_info link;
+          link.link_type = "capsule";
+          link.index = capsule_links.size()-1;
+          link.link_location = bodynaturelocation;
+          link_info_map.insert(std::pair<int,link_info>(i,link)); 
+          
+        }
+        else if(bodytype == "box")
+        {
+          Box box(bodydescription(0),bodydescription(1),bodydescription(2));
+          box_links.push_back(box);
+          link_info link;
+          link.link_type = "box";
+          link.index = box_links.size()-1;
+          link.link_location = bodynaturelocation;
+          link_info_map.insert(std::pair<int,link_info>(i,link)); 
+        }
+        
 
         //create transforms
-        Vec3f translation(bodydescription(2),bodydescription(3),bodydescription(4));
-        rotation.setEulerZYX(bodydescription(5),bodydescription(6),bodydescription(7));
+        Vec3f translation(bodydescription(3),bodydescription(4),bodydescription(5));
+        rotation.setEulerZYX(bodydescription(6),bodydescription(7),bodydescription(8));
         Transform3f joint_link_transform(rotation,translation);
 
 

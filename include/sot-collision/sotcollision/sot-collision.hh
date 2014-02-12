@@ -74,8 +74,13 @@ typedef std::vector<One2OneModelDistance> One2ManyModelDistance;
 typedef std::vector<One2ManyModelDistance> InterModelDistanceMatrix;
 
 
+
 namespace dynamicgraph {
   namespace sotcollision {
+
+struct link_info {string link_type; string link_location;int index;};
+
+bool operator < (const link_info &link1,const link_info  &link2 ) { return 0; }
 
 class SotCollision : public Entity
     {
@@ -116,37 +121,33 @@ class SotCollision : public Entity
                   Matrix getfclstate () const {
 	return fclstate;
       }
-      void capsulecollision();
 
-      void capsulebvhcollision();
+      // methods
+      void experimentcollision();
 
       int& updatefclmodels(int& dummy,int time);
 
-      void createfclmodel(const Matrix& bodydescription);
-
       void createcollisionpair(const std::string& body0, const std::string& body1);
 
-      void createcollisionlink(const std::string& bodyname, const Vector& bodydescription);
+      void createcollisionlink(const std::string& bodyname,const std::string& bodytype,const std::string& bodynaturelocation, const Vector& bodydescription);
 
-      void computefclmodelclosestdistancejacobian();
+      Vector& computeimdVector(Vector& res, int time );
 
+      Matrix& computeimdJacobian(Matrix& res,int time );
+
+
+      // vars
       dynamicgraph::SignalPtr< MatrixHomogeneous,int >& createPositionSignalIN(const std::string& signame);
 
       dynamicgraph::SignalPtr< Matrix,int >& createJacobiansignalIN(const std::string& signame);
-
-      
 
       dynamicgraph::SignalTimeDependent< Matrix,int >& createIMDJacobianSignal();
 
       dynamicgraph::SignalTimeDependent< Vector,int >& createInterModelDistanceSignal();
 
-      Matrix& computeFCLOutput(Matrix& res, int t);
-
       std::map<std::string,int> fcl_body_map; 
 
-      Vector& computeimdVector(Vector& res, int time );
-
-      Matrix& computeimdJacobian(Matrix& res,int time );
+      std::map<int,link_info> link_info_map; 
 
       MatrixHomogeneous UNIT_ROTATION;
 
@@ -157,23 +158,19 @@ class SotCollision : public Entity
       static const std::string CLASS_NAME;
 
     private:
-
       int dimension;
       //intern signals
-      dynamicgraph::SignalTimeDependent<int,int> fclmodelupdateSINTERN;
-       
-      dynamicgraph::SignalTimeDependent< Matrix,int> StatesOUT;
+      dynamicgraph::SignalTimeDependent<int,int> fclmodelupdateSINTERN;    
       dynamicgraph::SignalPtr< MatrixHomogeneous,int > *body_transformation_input[10];
       dynamicgraph::SignalPtr< Matrix,int > *body_jacobian_input[10];
       dynamicgraph::SignalPtr< Matrix,int > *collision_body_jacobian_input[10];
-      dynamicgraph::SignalTimeDependent<Vector,int> *collisiondistance;
-      dynamicgraph::SignalTimeDependent<Matrix,int> *collisionjacobian;
-
-
-      
       dynamicgraph::SignalTimeDependent<ml::Vector,int> InterModelDistanceOUT;
+      dynamicgraph::SignalTimeDependent< Vector,int > collisionDistance;
+      dynamicgraph::SignalTimeDependent<Matrix,int >collisionJacobian;
+
 
       std::vector<Capsule> capsule_links;
+      std::vector<Box> box_links;
       std::vector<Transform3f> transform_links;
       std::vector<Transform3f> transform_joint_links;
       std::list< dynamicgraph::SignalBase<int>*  > genericSignalRefs;
@@ -186,11 +183,42 @@ class SotCollision : public Entity
       // collision pairs
       std::vector< std::vector<std::string> >  collision_pairs;
       int num_collisionpairs;
-
-    InterModelDistanceMatrix imdm;
+      InterModelDistanceMatrix imdm;
 
     };
   }
 }
 
 #endif
+/*
+dynamicgraph::SignalTimeDependent<Matrix,int>& SotCollision::createIMDJacobianSignal( )
+{
+  dynamicgraph::SignalTimeDependent<Matrix,int > * sig
+    = new dynamicgraph::SignalTimeDependent<Matrix,int>
+    ( boost::bind(&SotCollision::computeimdJacobian,this,_1,_2),
+      fclmodelupdateSINTERN,
+      "sotCollision("+name+")::output(matrix)::"+std::string("collisionJacobian"));
+
+  genericSignalRefs.push_back( sig );
+  signalRegistration( *sig );
+
+  sig->addDependency(fclmodelupdateSINTERN);
+  return *sig;
+}
+dynamicgraph::SignalTimeDependent<Vector,int>& SotCollision::createInterModelDistanceSignal( )
+{
+
+  dynamicgraph::SignalTimeDependent< Vector,int > * sig
+    = new dynamicgraph::SignalTimeDependent<Vector,int>
+    ( boost::bind(&SotCollision::computeimdVector,this,_1,_2),
+      fclmodelupdateSINTERN,
+      "sotCollision("+name+")::output(vector)::"+std::string("collisionDistance"));
+
+  genericSignalRefs.push_back( sig );
+  signalRegistration( *sig );
+   sig->addDependency(fclmodelupdateSINTERN);
+
+
+  return *sig;  
+}*/
+
