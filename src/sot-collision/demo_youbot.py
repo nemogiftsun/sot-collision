@@ -119,7 +119,7 @@ class RobotCollisionModel:
         #self.robot.dynamic.Jwrist_2_joint.recompute(self.dt)
         self.a.collisionDistance.recompute(self.dt)
         self.a.collisionJacobian.recompute(self.dt)
-        print self.a.collisionDistance.value
+        #print self.a.collisionDistance.value
         self.dt = self.dt+1
         self.getstate()
         self.rcm_pub.publish(self.linkcollisionmodel)

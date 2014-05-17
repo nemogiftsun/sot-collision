@@ -8,6 +8,19 @@
 
 #include "sot-collision/sotcollision/sot-collision.hh"
 
+#include "fcl/traversal/traversal_node_bvhs.h"
+#include "fcl/traversal/traversal_node_setup.h"
+#include "fcl/collision_node.h"
+#include "fcl/collision.h"
+#include "fcl/BV/BV.h"
+#include "fcl/shape/geometric_shapes.h"
+#include "fcl/narrowphase/narrowphase.h"
+#include "fcl/math/transform.h"
+#include "fcl/collision_data.h"
+#include "fcl/collision_object.h"
+#include "fcl/BVH/BVH_model.h"
+//#include "test_fcl_utility.h"
+//#include "fcl_resources/config.h"
 
 #include "commands.hh"
 #include "test_fcl_utility.h"
@@ -140,7 +153,7 @@ SotCollision::~SotCollision()
 void SotCollision::experimentcollision()
 {
 
-
+/*
         Timer timer;
     
         float v1,v2,x,y,z;
@@ -149,7 +162,7 @@ void SotCollision::experimentcollision()
         //gettimeofday(&start, NULL);
         timer.start();
         
-       /* while(i<1){
+        while(i<1){
                 
         v1 = 5; 
         v2 = 10 ;
@@ -174,7 +187,7 @@ void SotCollision::experimentcollision()
 	    FCL_REAL dist = 0.;
         Vec3f l1 , l2;
       
-	    check = solver.shapeDistance<Capsule, Capsule>(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &dist, &l1, &l2);*/
+	    check = solver.shapeDistance<Capsule, Capsule>(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &dist, &l1, &l2);
 
        Vec3f l1 , l2;
        FCL_REAL dist;    
@@ -189,10 +202,10 @@ void SotCollision::experimentcollision()
        l2 = boxb_transform.transform(l2);
 
        std::cout << l1;
-       std::cout << l2; 
+       std::cout << l2; */
 
 	    //check = solver.shapeIntersect(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &contact_point, &penetration, &normal);
-	    distance = dist;
+	    //distance = dist;
         //std::cout << l1;
         //std::cout << l2; 
         //Transform3f temptransform (Vec3f (1, 1, 1));
@@ -213,8 +226,48 @@ void SotCollision::experimentcollision()
         //timer.stop();
         //diff = end.tv_usec - start.tv_usec - 15 ;
        // diff = timer.getElapsedTimeInMicroSec() - 15;
+
+  /*
+  using namespace fcl;
+ // create bvh for box
+  Box b1(20,20,20);
+  BVHModel<RSS> b1_rss;
+  generateBVHModel(b1_rss, b1, Transform3f());
+
+
+    //get the data from box transformation
+  // create bvh for point cloud
+  //get the data from point cloud
+  int x = 0;
+  int y = 0;
+  int z = 0;
+
+  int inr = 1;
+  std::vector<Vec3f> pc;
+  pc.resize(100);
+  for(int i = 0;x <=10;x++)
+  {
+  for(int j = 0;x <=10;x++)
+  {
+    Vec3f point(i,y,j);
+    pc.push_back(point);
+  }
+  }
+
+  BV bv;
+  BVHModel<BV> m1;
+  //m1.bv_splitter.reset(new BVSplitter<BV>(split_method));
+  m1.beginModel();
+  m1.addSubModel(pc);
+  m1.endModel();
+
+ 
+ // ccd query 
+  CollisionRequest request;
+  request.gjk_solver_type = GST_INDEP;
+  CollisionResult result;
    
-        
+        */
 }	  
 
 
