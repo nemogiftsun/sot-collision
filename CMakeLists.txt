@@ -4,23 +4,7 @@
 #
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-# Catkin part
-project(sot-collision)
 
-find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs message_generation std_srvs geometry_msgs sensor_msgs tf visualization_msgs )
-
-
-#add_message_files(FILES Matrix.msg Vector.msg)
-
-#add_service_files(FILES  RunCommand.srv)
-
-#generate_messages(DEPENDENCIES dynamic_graph_bridge std_msgs)
-
-catkin_package()
-
-catkin_python_setup()
-
-# laas part
 INCLUDE(cmake/base.cmake)
 INCLUDE(cmake/cpack.cmake)
 

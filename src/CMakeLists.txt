@@ -30,7 +30,7 @@ LINK_DIRECTORIES(${DYNAMIC_GRAPH_PYTHON_LIBRARY_DIRS} ${PYTHON_LIBRARY_DIRS})
 
 ADD_LIBRARY(${LIBRARY_NAME}
   sot-collision.cc
-  test_fcl_utility.cpp
+  #test_fcl_utility.cpp
   )
   
 
@@ -62,9 +62,6 @@ PKG_CONFIG_USE_DEPENDENCY(wrap dynamic-graph-python)
 PKG_CONFIG_USE_DEPENDENCY(wrap dynamic-graph)
 PKG_CONFIG_USE_DEPENDENCY(wrap fcl)
 
-message(dyngrap ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-
-install(PROGRAMS ${CMAKE_SOURCE_DIR}/src/sot-collision/demo.py
-         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+#message(dyngrap ${CATKIN_PACKAGE_BIN_DESTINATION})
+#install(PROGRAMS ${CMAKE_SOURCE_DIR}/src/sot-collision/demo.py DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
