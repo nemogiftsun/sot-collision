@@ -8,30 +8,6 @@
 
 #include "sot-collision.hh"
 
-#include "fcl/traversal/traversal_node_bvhs.h"
-#include "fcl/traversal/traversal_node_setup.h"
-#include "fcl/collision_node.h"
-#include "fcl/collision.h"
-#include "fcl/BV/BV.h"
-#include "fcl/shape/geometric_shapes.h"
-#include "fcl/narrowphase/narrowphase.h"
-#include "fcl/math/transform.h"
-#include "fcl/collision_data.h"
-#include "fcl/collision_object.h"
-#include "fcl/BVH/BVH_model.h"
-//#include "test_fcl_utility.h"
-//#include "fcl_resources/config.h"
-
-#include "commands.hh"
-//#include "test_fcl_utility.h"
-
-
-#include <jrl/mal/boost.hh>
-#include "jrl/mal/matrixabstractlayer.hh"
-
-#include <dynamic-graph/all-commands.h>
-
-
 namespace ml = maal::boost;
 
 using namespace std;
@@ -43,8 +19,7 @@ using namespace dynamicgraph::sotcollision;
 using namespace dynamicgraph::sot;
 using namespace ::dynamicgraph::command;
 using namespace dynamicgraph;
-using namespace tinyxml2;
-//using namespace collisiontest;
+
 
 DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(SotCollision, "SotCollision");
 
@@ -62,8 +37,6 @@ collisionModelState( boost::bind(&SotCollision::computeCollisionModelState,this,
 fclmodelupdateSINTERN,
 "sotCollision("+name+")::output(vector)::"+std::string("collisionModelState"))
 {
-      // const char* title = titleElement->GetText();
-      //buildACollisionModel();
 
 			signalRegistration(collisionJacobian);
 			signalRegistration(collisionDistance);
@@ -81,255 +54,50 @@ fclmodelupdateSINTERN,
      UNIT_ROTATION(2,0) = 0; UNIT_ROTATION(2,1) = 0; UNIT_ROTATION(2,2)=1;
      UNIT_ROTATION(0,3) = 0;  UNIT_ROTATION(1,3) =0 ; UNIT_ROTATION(2,3)=0;
  
-    // genericSignalRefs.push_back( sig );
-
-
-     //fclmodelupdateSINTERN.setDependencyType(TimeDependency<int>::BOOL_DEPENDENT);
-
       using namespace ::dynamicgraph::command;
       std::string docstring;
-      docstring = docCommandVoid2("Create a jacobian (world frame) signal only for one joint.",
-				  "string (signal name)","string (joint name)");
-      addCommand(std::string("DoExperimentCollisionCheck"),
-		 new commands::DoExperimentCollisionCheck(*this, docstring));
-  // getPendulumMass
-  docstring =
-    "\n"
-    "    Get pendulum mass\n"
-    "\n";
-  addCommand(std::string("getcheck"),
-	     new ::dynamicgraph::command::Getter<SotCollision, bool>
-	     (*this, &SotCollision::getcheck, docstring));
-  docstring =
-    "\n"
-    "    Get pendulum mass\n"
-    "\n";
-  addCommand(std::string("getdimension"),
-	     new ::dynamicgraph::command::Getter<SotCollision, double>
-	     (*this, &SotCollision::getdimension, docstring));	 
-	 docstring =
-    "\n"
-    "    Get pendulum mass\n"
-    "\n";
-  addCommand(std::string("gettime"),
-	     new ::dynamicgraph::command::Getter<SotCollision, double>
-	     (*this, &SotCollision::gettime, docstring));	 	
+      docstring =
+        "\n"
+        "    Get Collision Checks\n"
+        "\n";
+      addCommand(std::string("getcheck"),
+	         new ::dynamicgraph::command::Getter<SotCollision, bool>
+	         (*this, &SotCollision::getcheck, docstring));
+      docstring =
+        "\n"
+        "    Get dimension of the collision model\n"
+        "\n";
+      addCommand(std::string("getdimension"),
+	         new ::dynamicgraph::command::Getter<SotCollision, double>
+	         (*this, &SotCollision::getdimension, docstring));	 
+	     docstring =
+        "\n"
+        "    Get time\n"
+        "\n";
+      addCommand(std::string("gettime"),
+	         new ::dynamicgraph::command::Getter<SotCollision, double>
+	         (*this, &SotCollision::gettime, docstring));	 	
+      
+
+      addCommand(std::string("getfclstate"),
+	         new ::dynamicgraph::command::Getter<SotCollision, Matrix>
+	         (*this, &SotCollision::getfclstate, docstring));	 	
   
-
-
-  addCommand(std::string("getfclstate"),
-	     new ::dynamicgraph::command::Getter<SotCollision, Matrix>
-	     (*this, &SotCollision::getfclstate, docstring));	 	
-  
-  
-
-
+ 
 ////// new important and useful commands
 
-    addCommand(std::string("createcollisionlink"),
-		     makeCommandVoid4(*this,&SotCollision::createcollisionlink,docstring));
+      addCommand(std::string("createcollisionlink"),
+	         makeCommandVoid4(*this,&SotCollision::createcollisionlink,docstring));
 
-    addCommand(std::string("createcollisionpair"),
-		     makeCommandVoid2(*this,&SotCollision::createcollisionpair,docstring));
-
-
-/////  new important and useful commands
-	 	 
-/*
-
-    
-    "\n"
-    "    Update capsular_links\n"
-    "\n";
-    addCommand(std::string("update_link_model"),
-		     new commands::UpdateLinkModel(*this, docstring));	
-docstring =
-    "\n"
-    "    Get fcl collision model info\n"
-    "\n";
-  addCommand(std::string("getcollisionmodelinfo"),
-	     new ::dynamicgraph::command::Getter<SotCollision, std::vector<Tuple>>
-	     (*this, &SotCollision::getcollisionmodelinfo, docstring));    
-    */
-}
- 
-
-void SotCollision::buildACollisionModel()
-{
-      XMLDocument doc;
-      doc.LoadFile("/home/nemogiftsun/laas/devel/ros/src/sot-collision/src/collision_configuration.xml");
-      if (doc.ErrorID() == 0) std::cout << "Configuration File Loaded\n";
-      //const char* title = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies")->LastChildElement("capsule")->Attribute("name");
-
-      XMLElement* bodies = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies");
-      XMLElement* pairs  = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Pairs");
-      // Create Collision bodies/links
-      XMLNode* bodyInit = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies")->FirstChildElement("capsule");
-      Vector bodydescription;
-      bodydescription.resize(9);
-      XMLElement* bodyPointer = (XMLElement*) bodyInit;
-      for (int i = 0; i<=0;i++)
-      {
-          const char* name = bodyPointer->Attribute("name");
-          const char* type = bodyPointer->Attribute("type");
-          bodydescription(0) = (FCL_REAL) bodyPointer->FloatAttribute("radius");
-          bodydescription(1) = (FCL_REAL) bodyPointer->FloatAttribute("length");
-          bodydescription(2) = (FCL_REAL) bodyPointer->FloatAttribute("length");
-          bodydescription(3) = (FCL_REAL) bodyPointer->FloatAttribute("x");
-          bodydescription(4) = (FCL_REAL) bodyPointer->FloatAttribute("y");
-          bodydescription(5) = (FCL_REAL) bodyPointer->FloatAttribute("z");
-          bodydescription(6) = (FCL_REAL) bodyPointer->FloatAttribute("roll");
-          bodydescription(7) = (FCL_REAL) bodyPointer->FloatAttribute("pitch");
-          bodydescription(8) = (FCL_REAL) bodyPointer->FloatAttribute("yaw");          
-          createcollisionlink(name,"capsule",type,bodydescription);
-                
-          bodyPointer= bodyPointer->NextSiblingElement("capsule");
-      }
-      
- 
-      /// Create COllision pairs
-
-
-    // XMLElement* titleElement = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies");
-    // XMLElement* titleElement = doc.FirstChildElement("CollisionInfo");
-   //  const char* title = titleElement->GetText();
-     //const char* title = titleElement->Attribute("name");
-      //printf( "Name of play (1): %s\n", title );
-      //XMLElement* titleElement = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies")->FirstChildElement("capsule");
-
- 
-       //XMLNode* titleElement = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies")->FirstChildElement("capsule");
-      //const char* title = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies")->LastChildElement("capsule")->Attribute("name");
-      //const char* title1  = titleElement->NextSiblingElement("capsule")->Attribute("name");
-     // printf( "Name of play (1): %s\n", title );
-      //printf( "Name of play (1): %s\n", title1);
+      addCommand(std::string("createcollisionpair"),
+	         makeCommandVoid2(*this,&SotCollision::createcollisionpair,docstring));
 
 }
+ 
 
 SotCollision::~SotCollision()
 {
 }
-void SotCollision::experimentcollision()
-{
-
-/*
-        Timer timer;
-    
-        float v1,v2,x,y,z;
-	    GJKSolver_indep solver;
-        int i = 0;
-        //gettimeofday(&start, NULL);
-        timer.start();
-        
-        while(i<1){
-                
-        v1 = 5; 
-        v2 = 10 ;
-        x= 23; 
-        y = 0;
-        z = 0; 
-
-	Capsule capsulea (v1, v2);
-	Transform3f capsulea_transform (Vec3f (x, y, z));
-
-        v1 = 5; 
-        v2 = 10;
-        x = 0; 
-        y = 0;
-        z = 0; 
-
-	Capsule capsuleb (v1, v2);
-    Matrix3f rot(0.0,0,1,0,1,0,-1,0,0) ;
-	Transform3f capsuleb_transform (rot,Vec3f (x, y, z));
-	
-	    FCL_REAL penetration = 0.;
-	    FCL_REAL dist = 0.;
-        Vec3f l1 , l2;
-      
-	    check = solver.shapeDistance<Capsule, Capsule>(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &dist, &l1, &l2);
-
-       Vec3f l1 , l2;
-       FCL_REAL dist;    
-       Box boxa(0.64,0.4,0.11);
-       Transform3f boxa_transform (Vec3f(0,0,0));
-       Box boxb(0.5,0.8,0.11);
-       Transform3f boxb_transform (Vec3f(0.77,-0.82,0.025));
-       check = solver.shapeDistance(boxb, boxb_transform, boxa, boxa_transform, &dist, &l1, &l2);
-
-       l1 = boxa_transform.transform(l1);
-
-       l2 = boxb_transform.transform(l2);
-
-       std::cout << l1;
-       std::cout << l2; */
-
-	    //check = solver.shapeIntersect(capsulea, capsulea_transform, capsuleb, capsuleb_transform, &contact_point, &penetration, &normal);
-	    //distance = dist;
-        //std::cout << l1;
-        //std::cout << l2; 
-        //Transform3f temptransform (Vec3f (1, 1, 1));
-        //Vec3f a = temptransform.transform(Vec3f (1, 2, 3));
-        //std::cout << "vectranform" << std::endl;
-        //std::cout << a[0];
-        //std::cout << a[1];
-        //std::cout << a[2];
-
-        //if (i = 0)
-        //{
-          //gettimeofday(&start, NULL);
-        //}
-        //i = i + 1;
-        //}
-     
-        //gettimeofday(&end, NULL);
-        //timer.stop();
-        //diff = end.tv_usec - start.tv_usec - 15 ;
-       // diff = timer.getElapsedTimeInMicroSec() - 15;
-
-  /*
-  using namespace fcl;
- // create bvh for box
-  Box b1(20,20,20);
-  BVHModel<RSS> b1_rss;
-  generateBVHModel(b1_rss, b1, Transform3f());
-
-
-    //get the data from box transformation
-  // create bvh for point cloud
-  //get the data from point cloud
-  int x = 0;
-  int y = 0;
-  int z = 0;
-
-  int inr = 1;
-  std::vector<Vec3f> pc;
-  pc.resize(100);
-  for(int i = 0;x <=10;x++)
-  {
-  for(int j = 0;x <=10;x++)
-  {
-    Vec3f point(i,y,j);
-    pc.push_back(point);
-  }
-  }
-
-  BV bv;
-  BVHModel<BV> m1;
-  //m1.bv_splitter.reset(new BVSplitter<BV>(split_method));
-  m1.beginModel();
-  m1.addSubModel(pc);
-  m1.endModel();
-
- 
- // ccd query 
-  CollisionRequest request;
-  request.gjk_solver_type = GST_INDEP;
-  CollisionResult result;
-   
-        */
-}	  
-
-
 
 int& SotCollision::updatefclmodels(int& dummy,int time)
 {
@@ -698,9 +466,6 @@ void SotCollision::createcollisionlink(const std::string& bodyname, const std::s
         fcl_body_map.insert(std::pair<std::string,int>(signame_in,i) ); 
         body_transformation_input[i] = &createPositionSignalIN(signame_in); 
         body_jacobian_input[i] = &createJacobiansignalIN(std::string("J")+signame_in); 
-        //collision_body_jacobian_input[i] = &createJacobiansignalIN(std::string("CJ")+signame_in);
-      // temporarily consider only capsules
-        // create capsules for the body
 
         //ShapeBase collision_link;
         if(bodytype == "capsule")
@@ -743,37 +508,4 @@ void SotCollision::createcollisionlink(const std::string& bodyname, const std::s
       fclmodelupdateSINTERN.addDependency(*body_jacobian_input[i]);
 
 }
-
-/*
-void SotCollision::updatelinkmodel(transforms)
-{
-    Quaternion3f quatrotation;
-    
-    for(i=0;i<5;i++)
-    {
-        //get joint tranforms 
-        Matrix3f rotation(transforms[i][0](0),transforms[i][0](1),transforms[i][0](2)
-                          ,transforms[i][1](0),transforms[i][1](1),transforms[i][1](2)
-                          ,transforms[i][2](0),transforms[i][0](1),transforms[i][0](2));
-        Vec3f translation(transforms[i][0](3),transforms[i][1](3),transforms[i][2](3));
-       
-        //update transforms
-        transform_links[i].setTransform(rotation,translation);
-
-    }
-
-}
-
-
-std::tuple SotCollision::getcollisionmodelinfo()
-{
-    
-     std::make_tuple();
-     capsule_links
-     transform_links
-     
-     std::tuple a;
-     return a;
-
-}*/
 
