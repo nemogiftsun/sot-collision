@@ -6,7 +6,7 @@
 
 
 
-#include "sot-collision/sotcollision/sot-collision.hh"
+#include "sot-collision.hh"
 
 #include "fcl/traversal/traversal_node_bvhs.h"
 #include "fcl/traversal/traversal_node_setup.h"
@@ -23,7 +23,7 @@
 //#include "fcl_resources/config.h"
 
 #include "commands.hh"
-#include "test_fcl_utility.h"
+//#include "test_fcl_utility.h"
 
 
 #include <jrl/mal/boost.hh>
@@ -43,9 +43,11 @@ using namespace dynamicgraph::sotcollision;
 using namespace dynamicgraph::sot;
 using namespace ::dynamicgraph::command;
 using namespace dynamicgraph;
-using namespace collisiontest;
+using namespace tinyxml2;
+//using namespace collisiontest;
 
 DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(SotCollision, "SotCollision");
+
 
 SotCollision::SotCollision(const std::string& inName) :
   Entity(inName),
@@ -55,14 +57,21 @@ fclmodelupdateSINTERN,
 "sotCollision("+name+")::output(vector)::"+std::string("collisionDistance")),
 collisionJacobian(boost::bind(&SotCollision::computeimdJacobian,this,_1,_2),
 fclmodelupdateSINTERN,
-"sotCollision("+name+")::output(matrix)::"+std::string("collisionJacobian"))
+"sotCollision("+name+")::output(matrix)::"+std::string("collisionJacobian")),
+collisionModelState( boost::bind(&SotCollision::computeCollisionModelState,this,_1,_2),
+fclmodelupdateSINTERN,
+"sotCollision("+name+")::output(vector)::"+std::string("collisionModelState"))
 {
+      // const char* title = titleElement->GetText();
+      //buildACollisionModel();
 
 			signalRegistration(collisionJacobian);
 			signalRegistration(collisionDistance);
+      signalRegistration(collisionModelState);
 
      collisionDistance.addDependency(fclmodelupdateSINTERN);
      collisionJacobian.addDependency(fclmodelupdateSINTERN);
+     collisionModelState.addDependency(fclmodelupdateSINTERN);
 
       dimension = 0;
       num_collisionpairs = 0;
@@ -95,9 +104,9 @@ fclmodelupdateSINTERN,
     "\n"
     "    Get pendulum mass\n"
     "\n";
-  addCommand(std::string("getdistance"),
+  addCommand(std::string("getdimension"),
 	     new ::dynamicgraph::command::Getter<SotCollision, double>
-	     (*this, &SotCollision::getdistance, docstring));	 
+	     (*this, &SotCollision::getdimension, docstring));	 
 	 docstring =
     "\n"
     "    Get pendulum mass\n"
@@ -144,8 +153,58 @@ docstring =
     */
 }
  
-		   
 
+void SotCollision::buildACollisionModel()
+{
+      XMLDocument doc;
+      doc.LoadFile("/home/nemogiftsun/laas/devel/ros/src/sot-collision/src/collision_configuration.xml");
+      if (doc.ErrorID() == 0) std::cout << "Configuration File Loaded\n";
+      //const char* title = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies")->LastChildElement("capsule")->Attribute("name");
+
+      XMLElement* bodies = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies");
+      XMLElement* pairs  = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Pairs");
+      // Create Collision bodies/links
+      XMLNode* bodyInit = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies")->FirstChildElement("capsule");
+      Vector bodydescription;
+      bodydescription.resize(9);
+      XMLElement* bodyPointer = (XMLElement*) bodyInit;
+      for (int i = 0; i<=0;i++)
+      {
+          const char* name = bodyPointer->Attribute("name");
+          const char* type = bodyPointer->Attribute("type");
+          bodydescription(0) = (FCL_REAL) bodyPointer->FloatAttribute("radius");
+          bodydescription(1) = (FCL_REAL) bodyPointer->FloatAttribute("length");
+          bodydescription(2) = (FCL_REAL) bodyPointer->FloatAttribute("length");
+          bodydescription(3) = (FCL_REAL) bodyPointer->FloatAttribute("x");
+          bodydescription(4) = (FCL_REAL) bodyPointer->FloatAttribute("y");
+          bodydescription(5) = (FCL_REAL) bodyPointer->FloatAttribute("z");
+          bodydescription(6) = (FCL_REAL) bodyPointer->FloatAttribute("roll");
+          bodydescription(7) = (FCL_REAL) bodyPointer->FloatAttribute("pitch");
+          bodydescription(8) = (FCL_REAL) bodyPointer->FloatAttribute("yaw");          
+          createcollisionlink(name,"capsule",type,bodydescription);
+                
+          bodyPointer= bodyPointer->NextSiblingElement("capsule");
+      }
+      
+ 
+      /// Create COllision pairs
+
+
+    // XMLElement* titleElement = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies");
+    // XMLElement* titleElement = doc.FirstChildElement("CollisionInfo");
+   //  const char* title = titleElement->GetText();
+     //const char* title = titleElement->Attribute("name");
+      //printf( "Name of play (1): %s\n", title );
+      //XMLElement* titleElement = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies")->FirstChildElement("capsule");
+
+ 
+       //XMLNode* titleElement = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies")->FirstChildElement("capsule");
+      //const char* title = doc.FirstChildElement("CollisionInfo")->FirstChildElement("Bodies")->LastChildElement("capsule")->Attribute("name");
+      //const char* title1  = titleElement->NextSiblingElement("capsule")->Attribute("name");
+     // printf( "Name of play (1): %s\n", title );
+      //printf( "Name of play (1): %s\n", title1);
+
+}
 
 SotCollision::~SotCollision()
 {
@@ -522,6 +581,12 @@ for (int p=0; p < num_collisionpairs;p++)
    return res;
 }
 
+Matrix& SotCollision::computeCollisionModelState(Matrix& res, int time)
+{
+   fclmodelupdateSINTERN(time);
+   res  = fclstate;
+   return res;
+}
 
 Vector& SotCollision::computeimdVector(Vector& res, int time)
 {
@@ -633,7 +698,7 @@ void SotCollision::createcollisionlink(const std::string& bodyname, const std::s
         fcl_body_map.insert(std::pair<std::string,int>(signame_in,i) ); 
         body_transformation_input[i] = &createPositionSignalIN(signame_in); 
         body_jacobian_input[i] = &createJacobiansignalIN(std::string("J")+signame_in); 
-        collision_body_jacobian_input[i] = &createJacobiansignalIN(std::string("CJ")+signame_in);
+        //collision_body_jacobian_input[i] = &createJacobiansignalIN(std::string("CJ")+signame_in);
       // temporarily consider only capsules
         // create capsules for the body
 
