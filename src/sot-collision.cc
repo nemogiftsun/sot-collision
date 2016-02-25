@@ -7,6 +7,7 @@
 
 
 #include "sot-collision.hh"
+#include <sot/core/debug.hh>
 
 namespace ml = maal::boost;
 
@@ -26,6 +27,7 @@ DYNAMICGRAPH_FACTORY_ENTITY_PLUGIN(SotCollision, "SotCollision");
 
 SotCollision::SotCollision(const std::string& inName) :
   Entity(inName),
+proximitySensorSIN(NULL,"SotCollision("+name+")::input(vector)::proximitySensor"),
 fclmodelupdateSINTERN(boost::bind(&SotCollision::updatefclmodels,this,_1,_2),sotNOSIGNAL,"sotCollision("+name+")::intern(dummy)::fclmodelupdateSINTERN" ),
 collisionDistance( boost::bind(&SotCollision::computeimdVector,this,_1,_2),
 fclmodelupdateSINTERN,
@@ -35,24 +37,35 @@ fclmodelupdateSINTERN,
 "sotCollision("+name+")::output(matrix)::"+std::string("collisionJacobian")),
 collisionModelState( boost::bind(&SotCollision::computeCollisionModelState,this,_1,_2),
 fclmodelupdateSINTERN,
-"sotCollision("+name+")::output(vector)::"+std::string("collisionModelState"))
+"sotCollision("+name+")::output(vector)::"+std::string("collisionModelState")),
+closestPointi( boost::bind(&SotCollision::computeClosestPointi,this,_1,_2),
+fclmodelupdateSINTERN,
+"sotCollision("+name+")::output(vector)::"+std::string("closestPointi")),
+closestPointj( boost::bind(&SotCollision::computeClosestPointj,this,_1,_2),
+fclmodelupdateSINTERN,
+"sotCollision("+name+")::output(vector)::"+std::string("closestPointj"))
 {
-
+			signalRegistration(proximitySensorSIN);
 			signalRegistration(collisionJacobian);
 			signalRegistration(collisionDistance);
       signalRegistration(collisionModelState);
+      signalRegistration(closestPointj);
+      signalRegistration(closestPointi);	
 
-     collisionDistance.addDependency(fclmodelupdateSINTERN);
-     collisionJacobian.addDependency(fclmodelupdateSINTERN);
-     collisionModelState.addDependency(fclmodelupdateSINTERN);
+      collisionDistance.addDependency(proximitySensorSIN);
+      collisionDistance.addDependency(fclmodelupdateSINTERN);
+      collisionJacobian.addDependency(fclmodelupdateSINTERN);
+      collisionModelState.addDependency(fclmodelupdateSINTERN);
+      closestPointi.addDependency(fclmodelupdateSINTERN);
+      closestPointj.addDependency(fclmodelupdateSINTERN);
 
       dimension = 0;
       num_collisionpairs = 0;
  
-     UNIT_ROTATION(0,0) = 1; UNIT_ROTATION(0,1) = 0; UNIT_ROTATION(0,2)=1;
-     UNIT_ROTATION(1,0) = 0; UNIT_ROTATION(1,1) = 1; UNIT_ROTATION(1,2)=0;
-     UNIT_ROTATION(2,0) = 0; UNIT_ROTATION(2,1) = 0; UNIT_ROTATION(2,2)=1;
-     UNIT_ROTATION(0,3) = 0;  UNIT_ROTATION(1,3) =0 ; UNIT_ROTATION(2,3)=0;
+      UNIT_ROTATION(0,0) = 1; UNIT_ROTATION(0,1) = 0; UNIT_ROTATION(0,2)=1;
+      UNIT_ROTATION(1,0) = 0; UNIT_ROTATION(1,1) = 1; UNIT_ROTATION(1,2)=0;
+      UNIT_ROTATION(2,0) = 0; UNIT_ROTATION(2,1) = 0; UNIT_ROTATION(2,2)=1;
+      UNIT_ROTATION(0,3) = 0;  UNIT_ROTATION(1,3) =0 ; UNIT_ROTATION(2,3)=0;
  
       using namespace ::dynamicgraph::command;
       std::string docstring;
@@ -70,13 +83,6 @@ fclmodelupdateSINTERN,
       addCommand(std::string("getdimension"),
 	         new ::dynamicgraph::command::Getter<SotCollision, double>
 	         (*this, &SotCollision::getdimension, docstring));	 
-	     docstring =
-        "\n"
-        "    Get time\n"
-        "\n";
-      addCommand(std::string("gettime"),
-	         new ::dynamicgraph::command::Getter<SotCollision, double>
-	         (*this, &SotCollision::gettime, docstring));	 	
       
 
       addCommand(std::string("getfclstate"),
@@ -101,6 +107,8 @@ SotCollision::~SotCollision()
 
 int& SotCollision::updatefclmodels(int& dummy,int time)
 {
+
+
 
 // update the fcl models from current transformation matrix
     for(int i=0;i<dimension;++i)
@@ -150,6 +158,7 @@ int& SotCollision::updatefclmodels(int& dummy,int time)
     // define solver
     GJKSolver_libccd solver;
     GJKSolver_indep solver1;
+
     
     // variables for fcl models
     FCL_REAL dist;
@@ -159,8 +168,6 @@ int& SotCollision::updatefclmodels(int& dummy,int time)
     //  This matrix is a vector of dimension * dimension 
     // (distance,closestpointinthecorrespondingrowlink)
 
-    
-    
     for(int i=0;i<dimension;++i)
     {
 
@@ -178,12 +185,12 @@ int& SotCollision::updatefclmodels(int& dummy,int time)
 
 								if(link_info_map[j].link_type == "capsule")
 								{
-                	  check = solver.shapeDistance<Capsule, Capsule>(capsule_links[link_info_map[i].index],transform_links[i], capsule_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
+                	  check = solver1.shapeDistance(capsule_links[link_info_map[i].index],transform_links[i], capsule_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
 
 								}
                 else if(link_info_map[j].link_type == "box")
 								{
-                	  check = solver.shapeDistance(capsule_links[link_info_map[i].index],transform_links[i], box_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
+                	  check = solver1.shapeDistance(capsule_links[link_info_map[i].index],transform_links[i], box_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
 								}
 
 				    }
@@ -192,33 +199,60 @@ int& SotCollision::updatefclmodels(int& dummy,int time)
 
 								if(link_info_map[j].link_type == "capsule")
 								{
-                	  check = solver.shapeDistance(box_links[link_info_map[i].index],transform_links[i], capsule_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
+                	  check = solver1.shapeDistance(box_links[link_info_map[i].index],transform_links[i], capsule_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
 
 								}
                 else if(link_info_map[j].link_type == "box")
 								{
-                	  check = solver1.shapeDistance(box_links[link_info_map[i].index],transform_links[i], box_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
+                         
+                         //normalized distance vector
+                         //normalized distance vector
+                     if (link_info_map[j].link_location == "external"){
+                            Vector distance = proximitySensorSIN(time);
+                            
+                            dist = (1 - distance(j-1))/20;
+                            l1 = (0,0,-0.045);
+                            l2 = (0,0,(-dist-0.045)); 
+			    Matrix3f rotation;
+			    //l1 = l1 + transform_links[i].transform(l1);
+			    //l2 = l2 + transform_links[i].transform(l2);
+                            Vec3f lchange(0,0,-0.045);
+			    rotation.setEulerZYX(0,0,0);
+                            Transform3f tli=transform_links[i]; Transform3f tlj=transform_links[i];
+                            Transform3f temp(rotation,lchange);
+                            l1 = (tli*temp).getTranslation();
+                            Vec3f lchange1(0,0,(-dist-0.045));
+                            //lchange = (0,0,-0.1);
+                            //temp.setTranslation(lchange);   
+                            Transform3f temp1(rotation,lchange1); 
+                            //Vec3f lchange = (0,0,-dist);
+                            //transform_links[i].setTranslation(lchange);                  
+                            l2 = (tlj*temp1).getTranslation(); 
+                            
+                            //std::cout << "transform x" << transform_links[i].getTranslation()[0] <<" y "<<transform_links[i].getTranslation()[1]<<" z "<<transform_links[i].getTranslation()[2]<<std::endl;    
+			    //std::cout << "transform rotation x " << transform_links[i].getQuatRotation().getX() << " rotation y " << transform_links[i].getQuatRotation().getY() << "transform rotation z " << transform_links[i].getQuatRotation().getZ()<< "transform rotation w " << transform_links[i].getQuatRotation().getW() << std::endl;    
+   			    //std::cout << "l1 = "  <<l1 <<std::endl;
+     			    //std::cout << "l2 = "  <<l2 <<std::endl;
 
+
+                     }
+                     else{
+                	  check = solver1.shapeDistance(box_links[link_info_map[i].index],transform_links[i], box_links[link_info_map[j].index],transform_links[j], &dist, &l1, &l2);
 
                            l1 = transform_links[i].transform(l1);
                            
-                           l2 = transform_links[j].transform(l2);
- 
-                                              
+                           l2 = transform_links[j].transform(l2); }                                        
 								}
 
 				    }
 
-
 		        imdm.at(i).at(j) = make_tuple(dist,make_tuple(l1[0],l1[1],l1[2]));
-
-		        imdm.at(j).at(i) = make_tuple(dist,make_tuple(l2[0],l2[1],l2[2])); 
-     
-		    }
-        
+		        imdm.at(j).at(i) = make_tuple(dist,make_tuple(l2[0],l2[1],l2[2]));     
+		    }      
      }
    
 //compute inter model jacobian
+
 
     return dummy;
 }
@@ -226,6 +260,10 @@ int& SotCollision::updatefclmodels(int& dummy,int time)
 
 Matrix& SotCollision::computeimdJacobian(Matrix& res, int time)
 {
+
+    closestPointI.resize(3,num_collisionpairs);
+    closestPointJ.resize(3,num_collisionpairs);
+
 
 for (int p=0; p < num_collisionpairs;p++)
 {
@@ -251,26 +289,6 @@ for (int p=0; p < num_collisionpairs;p++)
   MatrixHomogeneous Mj = body_transformation_input[j]->access(time);
   Matrix Ji = body_jacobian_input[i]->access(time);
   Matrix Jj = body_jacobian_input[j]->access(time);
-  /*
-  Matrix Vi(6,6),Vj(6,6);
-  for( int m=0;m<3;++i )
-    for( int n=0;n<3;++j )
-      {
-	Vi(m,n)=Mi(m,n);
-	Vi(m+3,n+3)=Mi(n,m);
-	Vi(m+3,n)=0.;
-	Vi(m,n+3)=0.;
-      }
-  Vi.inverse().multiply(Ji,Ji);
-  for( int m=0;m<3;++i )
-    for( int n=0;n<3;++j )
-      {
-	Vj(m,n)=Mj(m,n);
-	Vj(m+3,n+3)=Mj(n,m);
-	Vj(m+3,n)=0.;
-	Vj(m,n+3)=0.;
-      }
-  Vj.inverse().multiply(Jj,Jj);*/
 
   int cols = Ji.nbCols();
   // resizing result
@@ -279,18 +297,23 @@ for (int p=0; p < num_collisionpairs;p++)
 
   // compute collision jacobian distance
      // l1 and l2 vectors
-     Vec3f l1(imdm[i][j].get<1>().get<0>(),imdm[i][j].get<1>().get<1>(),imdm[i][j].get<1>().get<2>());
-     Vec3f l2(imdm[j][i].get<1>().get<0>(),imdm[j][i].get<1>().get<1>(),imdm[j][i].get<1>().get<2>());
-     Vec3f l = l1-l2;
-     l.normalize();
+  Vec3f l1(imdm[i][j].get<1>().get<0>(),imdm[i][j].get<1>().get<1>(),imdm[i][j].get<1>().get<2>());
+  Vec3f l2(imdm[j][i].get<1>().get<0>(),imdm[j][i].get<1>().get<1>(),imdm[j][i].get<1>().get<2>());
+  Vec3f l = l1-l2;
+  l.normalize();
 
-     //normalized distance vector
+     closestPointI(0,p) = l1[0];closestPointI(1,p) = l1[1];closestPointI(2,p) = l1[2];
+     closestPointJ(0,p) = l2[0];closestPointJ(1,p) = l2[1];closestPointJ(2,p) = l2[2];
+     std::cout << "cjl1 = "  <<l1 <<std::endl;
+     std::cout << "cjl2 = "  <<l2 <<std::endl;
      ln(0,0)= l[0]; ln(0,1)=l[1] ; ln(0,2)=l[2];
 
      // closest point computation in object a and b
 
      MatrixHomogeneous aclosestpointtransform, bclosestpointtransform = UNIT_ROTATION;
+      //l1(0,0)= 0; ln(0,1)=0.045 ; ln(0,2)=0;
      aclosestpointtransform(0,3) = l1[0];  aclosestpointtransform(1,3) =l1[1] ; aclosestpointtransform(2,3)=l1[2];
+     //aclosestpointtransform(0,3) = 0;  aclosestpointtransform(1,3) =0.045 ; aclosestpointtransform(2,3)=0;
      bclosestpointtransform(0,3) = l2[0];  bclosestpointtransform(1,3) =l2[1] ; bclosestpointtransform(2,3)=l2[2];
 
      MatrixHomogeneous aclosestpointlocalframe, bclosestpointlocalframe;
@@ -339,6 +362,8 @@ for (int p=0; p < num_collisionpairs;p++)
      Matrix cj;
      //ln 3*1
      //abpoint 3*3
+     sotDEBUG(1)<<"normal = " <<ln<<endl;
+     std::cout <<"normal = " <<ln<<std::endl;
      cj = ln*abpointgradient;
      for (int d=0;d<cols;d++)
      {
@@ -353,8 +378,25 @@ Matrix& SotCollision::computeCollisionModelState(Matrix& res, int time)
 {
    fclmodelupdateSINTERN(time);
    res  = fclstate;
+   //std::cout << "fclstate x" << fclstate(0,0) <<" y "<<fclstate(0,1)<<" z"<<fclstate(0,2)<<std::endl;
+   //std::cout << "fclstate rot x" << fclstate(0,3) <<" rot y "<<fclstate(0,4)<<" rot z"<<fclstate(0,5)<<" rot w"<<fclstate(0,6)<<std::endl;
    return res;
 }
+
+Matrix& SotCollision::computeClosestPointi(Matrix& res, int time)
+{
+   fclmodelupdateSINTERN(time);
+   res  = closestPointI;
+   return res;
+}
+
+Matrix& SotCollision::computeClosestPointj(Matrix& res, int time)
+{
+   fclmodelupdateSINTERN(time);
+   res  = closestPointJ;
+   return res;
+}
+
 
 Vector& SotCollision::computeimdVector(Vector& res, int time)
 {
@@ -421,13 +463,12 @@ void SotCollision::createcollisionpair(const std::string& body0,const std::strin
     collision_pairs[num_collisionpairs-1][0] = body0;
     collision_pairs[num_collisionpairs-1][1] = body1;
 
-  // init the right value from map
-  int i = fcl_body_map[body0];
-  int j = fcl_body_map[body1];
+    // init the right value from map
+    int i = fcl_body_map[body0];
+    int j = fcl_body_map[body1];
 
     collisionDistance.addDependency( *body_transformation_input[i] );
     collisionDistance.addDependency( *body_transformation_input[j] );
-
 
     collisionJacobian.addDependency( *body_jacobian_input[i] );
     collisionJacobian.addDependency( *body_jacobian_input[j] );
@@ -490,12 +531,10 @@ void SotCollision::createcollisionlink(const std::string& bodyname, const std::s
           link_info_map.insert(std::pair<int,link_info>(i,link)); 
         }
         
-
         //create transforms
         Vec3f translation(bodydescription(3),bodydescription(4),bodydescription(5));
         rotation.setEulerZYX(bodydescription(6),bodydescription(7),bodydescription(8));
         Transform3f joint_link_transform(rotation,translation);
-
 
         // push joint link transforms extracted from body description
         transform_joint_links[i] = joint_link_transform;             
@@ -508,4 +547,3 @@ void SotCollision::createcollisionlink(const std::string& bodyname, const std::s
       fclmodelupdateSINTERN.addDependency(*body_jacobian_input[i]);
 
 }
-
