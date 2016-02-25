@@ -105,15 +105,12 @@ class SotCollision : public Entity
 	return check;
       }
       
-            double getdimension () const {
+      double getdimension () const {
 	return dimension;
       }
       
-                  double gettime () const {
-	return diff;
-      }
 
-                  Matrix getfclstate () const {
+      Matrix getfclstate () const {
 	return fclstate;
       }
 
@@ -130,6 +127,10 @@ class SotCollision : public Entity
       Vector& computeimdVector(Vector& res, int time );
 
       Matrix& computeimdJacobian(Matrix& res,int time );
+
+      Matrix& computeClosestPointi(Matrix& res,int time );
+
+      Matrix& computeClosestPointj(Matrix& res,int time );
 
       Matrix& computeCollisionModelState(Matrix& res,int time );
 
@@ -165,6 +166,8 @@ class SotCollision : public Entity
       dynamicgraph::SignalTimeDependent< Vector,int > collisionDistance;
       dynamicgraph::SignalTimeDependent<Matrix,int >collisionJacobian;
       dynamicgraph::SignalTimeDependent<Matrix,int >collisionModelState;
+      dynamicgraph::SignalTimeDependent< Matrix,int > closestPointi;
+      dynamicgraph::SignalTimeDependent< Matrix,int > closestPointj;
 
       std::vector<Capsule> capsule_links;
       std::vector<Box> box_links;
@@ -176,15 +179,17 @@ class SotCollision : public Entity
       double distance;
       double TimeCheck;
       Matrix fclstate;
+      Matrix closestPointI, closestPointJ;
+         
       Matrix LinkDescription;
       // collision pairs
       std::vector< std::vector<std::string> >  collision_pairs;
       int num_collisionpairs;
       InterModelDistanceMatrix imdm;
+      SignalPtr<Vector,int> proximitySensorSIN;
 
     };
   }
 }
 #endif
-
 
