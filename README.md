@@ -1,4 +1,6 @@
 sot-collision
 =============
 
-collission model generator
+Work in progress
+
+Collission model generator
